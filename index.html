@@ -431,15 +431,15 @@
       margin-top: 4px;
     }
 
-    .lock-banner {
-      background: #fef3c7;
-      border: 1px solid #f59e0b;
-      color: #92400e;
+    .schedule-box {
+      background: var(--primary-light);
+      border: 1px solid #bfdbfe;
+      color: var(--primary-dark);
       padding: 10px 14px;
       border-radius: 10px;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       font-weight: 700;
-      margin-bottom: 14px;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -490,15 +490,22 @@
       "العلوم"
     ];
 
+    const DEFAULT_SCHEDULES = [
+      "السبت والثلاثاء — 4:00 م",
+      "السبت والثلاثاء — 6:00 م",
+      "الأحد والأربعاء — 4:00 م",
+      "الأحد والأربعاء — 6:00 م",
+      "الاثنين والخميس — 5:00 م"
+    ];
+
     function createDefaultData() {
       return {
         settings: {
           centerName: "سنتر التميز التعليمي",
           adminUser: "admin",
           adminPass: "1234",
-          // بمجرد تغيير يوزر أو باسورد الإدارة مرة واحدة يتم قفل التعديل لمنع أي شخص من الاستيلاء على الحساب
-          adminLocked: false,
-          customSubjects: [...DEFAULT_SUBJECTS]
+          customSubjects: [...DEFAULT_SUBJECTS],
+          schedules: [...DEFAULT_SCHEDULES]
         },
         parents: [
           {
@@ -519,6 +526,7 @@
             id: "s1",
             name: "يوسف محمود حسن",
             grade: "الصف الخامس الابتدائي",
+            schedule: "السبت والثلاثاء — 4:00 م",
             parentId: "p1",
             subjects: ["القرآن الكريم", "اللغة العربية", "الرياضيات", "اللغة الإنجليزية"],
             records: {
@@ -548,6 +556,7 @@
             id: "s2",
             name: "مريم محمود حسن",
             grade: "الصف الثاني الإعدادي",
+            schedule: "الأحد والأربعاء — 6:00 م",
             parentId: "p1",
             subjects: ["اللغة العربية", "العلوم", "الدراسات الاجتماعية"],
             records: {
@@ -567,6 +576,7 @@
             id: "s3",
             name: "عمر كريم عادل",
             grade: "الصف الأول الثانوي",
+            schedule: "الاثنين والخميس — 5:00 م",
             parentId: "p2",
             subjects: ["الرياضيات", "اللغة الإنجليزية", "التاريخ"],
             records: {
@@ -637,7 +647,6 @@
       return student.records[subject];
     }
 
-    // تحميل البيانات من Firebase عند فتح الصفحة
     async function loadFromFirebase() {
       setSyncStatus("جاري التحميل من السحابة...");
       try {
@@ -653,7 +662,10 @@
               ...(remoteData.settings || {}),
               customSubjects: Array.isArray(remoteData.settings?.customSubjects) && remoteData.settings.customSubjects.length
                 ? remoteData.settings.customSubjects
-                : [...DEFAULT_SUBJECTS]
+                : [...DEFAULT_SUBJECTS],
+              schedules: Array.isArray(remoteData.settings?.schedules) && remoteData.settings.schedules.length
+                ? remoteData.settings.schedules
+                : [...DEFAULT_SCHEDULES]
             },
             parents: Array.isArray(remoteData.parents) ? remoteData.parents : [],
             students: Array.isArray(remoteData.students) ? remoteData.students : []
@@ -661,7 +673,6 @@
           localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(db));
           setSyncStatus("متصل بـ Firebase ✓");
         } else {
-          // أول مرة: رفع البيانات الافتراضية إلى Firebase
           await saveToFirebase(false);
           setSyncStatus("تمت تهيئة قاعدة البيانات ✓");
         }
@@ -677,7 +688,6 @@
       renderApp();
     }
 
-    // حفظ البيانات في Firebase والذاكرة المحلية
     async function saveToFirebase(showMessage = true) {
       localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(db));
       setSyncStatus("جاري الحفظ...");
@@ -745,7 +755,7 @@
     // =========================================================================
     // شاشة تسجيل الدخول
     // =========================================================================
-    let loginMode = "parent"; // 'parent' | 'admin'
+    let loginMode = "parent";
 
     function renderLoginScreen() {
       const root = document.getElementById("appRoot");
@@ -794,15 +804,6 @@
                   <input type="password" id="loginAdminPass" placeholder="كلمة مرور الإدارة" required />
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;">دخول الإدارة</button>
-                ${!db.settings.adminLocked ? `
-                  <p class="helper-text" style="text-align:center; margin-top:10px;">
-                    البيانات الافتراضية: <b>${db.settings.adminUser}</b> / <b>${db.settings.adminPass}</b> (يُنصح بتغييرها فورًا من الإعدادات لقفلها)
-                  </p>
-                ` : `
-                  <p class="helper-text" style="text-align:center; margin-top:10px;">
-                    حساب الإدارة مؤمّن ومقفل ضد التعديل الخارجي.
-                  </p>
-                `}
               </form>
             `}
           </div>
@@ -887,9 +888,9 @@
         <div class="nav-pills">
           <button class="nav-pill ${session.adminTab === "overview" ? "active" : ""}" onclick="switchAdminTab('overview')">نظرة عامة</button>
           <button class="nav-pill ${session.adminTab === "parents" ? "active" : ""}" onclick="switchAdminTab('parents')">أولياء الأمور</button>
-          <button class="nav-pill ${session.adminTab === "students" ? "active" : ""}" onclick="switchAdminTab('students')">الطلاب والمواد</button>
+          <button class="nav-pill ${session.adminTab === "students" ? "active" : ""}" onclick="switchAdminTab('students')">الطلاب والمواعيد</button>
           <button class="nav-pill ${session.adminTab === "followup" ? "active" : ""}" onclick="switchAdminTab('followup')">المتابعة والدرجات والمصروفات</button>
-          <button class="nav-pill ${session.adminTab === "settings" ? "active" : ""}" onclick="switchAdminTab('settings')">الإعدادات والأمان</button>
+          <button class="nav-pill ${session.adminTab === "settings" ? "active" : ""}" onclick="switchAdminTab('settings')">الإعدادات والمواعيد</button>
         </div>
 
         <div id="adminTabContent"></div>
@@ -909,21 +910,22 @@
           <div class="card-title">إجراءات سريعة</div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn btn-primary" onclick="openAddParentModal()">+ إضافة ولي أمر</button>
-            <button class="btn btn-success" onclick="openAddStudentModal()">+ إضافة طالب</button>
+            <button class="btn btn-success" onclick="openAddStudentModal()">+ إضافة طالب وموعده</button>
             <button class="btn btn-warning" onclick="switchAdminTab('followup')">📝 تسجيل حضور / درجات / مصروفات</button>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title">آخر الطلاب المسجلين</div>
+          <div class="card-title">الطلاب المسجلون ومواعيدهم</div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>الطالب</th>
                   <th>الصف الدراسي</th>
+                  <th>الموعد</th>
                   <th>ولي الأمر</th>
-                  <th>المواد المسجلة</th>
+                  <th>المواد</th>
                   <th>إجراءات</th>
                 </tr>
               </thead>
@@ -934,6 +936,7 @@
                     <tr>
                       <td><b>${st.name}</b></td>
                       <td>${st.grade}</td>
+                      <td><span class="badge badge-success">${st.schedule || "غير محدد"}</span></td>
                       <td>${parent ? `${parent.name} (${parent.phone})` : "غير مرتبط"}</td>
                       <td>${(st.subjects || []).map(sub => `<span class="badge badge-info" style="margin:2px;">${sub}</span>`).join("")}</td>
                       <td>
@@ -942,7 +945,7 @@
                       </td>
                     </tr>
                   `;
-                }).join("") : `<tr><td colspan="5" style="text-align:center;">لا يوجد طلاب مسجلون بعد</td></tr>`}
+                }).join("") : `<tr><td colspan="6" style="text-align:center;">لا يوجد طلاب مسجلون بعد</td></tr>`}
               </tbody>
             </table>
           </div>
@@ -1099,7 +1102,7 @@
       await saveToFirebase();
     }
 
-    // إدارة الطلاب والمواد
+    // إدارة الطلاب والمواد والمواعيد
     function renderSubjectsCheckboxes(selectedList = []) {
       const allSubs = db.settings.customSubjects || DEFAULT_SUBJECTS;
       return `
@@ -1117,12 +1120,44 @@
       `;
     }
 
+    function renderScheduleOptions(selectedSchedule = "") {
+      const schedules = db.settings.schedules || DEFAULT_SCHEDULES;
+      const options = schedules.map(sc => `<option value="${sc}" ${sc === selectedSchedule ? "selected" : ""}>${sc}</option>`).join("");
+      return `
+        <select id="stScheduleSelect" onchange="toggleCustomScheduleInput()">
+          ${options}
+          <option value="__custom__" ${selectedSchedule && !schedules.includes(selectedSchedule) ? "selected" : ""}>موعد مخصص...</option>
+        </select>
+        <input type="text" id="stScheduleCustom" style="margin-top:8px; display:${selectedSchedule && !schedules.includes(selectedSchedule) ? "block" : "none"};"
+               value="${selectedSchedule && !schedules.includes(selectedSchedule) ? selectedSchedule : ""}"
+               placeholder="اكتب الموعد المخصص هنا (مثال: الجمعة 3:00 م)" />
+      `;
+    }
+
+    function toggleCustomScheduleInput() {
+      const sel = document.getElementById("stScheduleSelect");
+      const inp = document.getElementById("stScheduleCustom");
+      if (!sel || !inp) return;
+      inp.style.display = sel.value === "__custom__" ? "block" : "none";
+      if (sel.value === "__custom__") inp.focus();
+    }
+
+    function getSelectedScheduleValue() {
+      const sel = document.getElementById("stScheduleSelect");
+      const inp = document.getElementById("stScheduleCustom");
+      if (!sel) return "";
+      if (sel.value === "__custom__") {
+        return inp ? inp.value.trim() : "";
+      }
+      return sel.value;
+    }
+
     function renderStudentsSection() {
       const box = document.getElementById("adminTabContent");
       box.innerHTML = `
         <div class="card">
           <div class="card-title">
-            <span>قائمة الطلاب والمواد</span>
+            <span>قائمة الطلاب والمواعيد والمواد</span>
             <button class="btn btn-success btn-sm" onclick="openAddStudentModal()">+ إضافة طالب</button>
           </div>
           <div class="table-wrap">
@@ -1131,6 +1166,7 @@
                 <tr>
                   <th>اسم الطالب</th>
                   <th>الصف الدراسي</th>
+                  <th>الموعد</th>
                   <th>ولي الأمر</th>
                   <th>المواد</th>
                   <th>إجراءات</th>
@@ -1143,6 +1179,7 @@
                     <tr>
                       <td><b>${st.name}</b></td>
                       <td>${st.grade}</td>
+                      <td><span class="badge badge-success">${st.schedule || "غير محدد"}</span></td>
                       <td>${parent ? parent.name : '<span class="badge badge-warning">غير محدد</span>'}</td>
                       <td>${(st.subjects || []).map(sub => `<span class="badge badge-info" style="margin:2px;">${sub}</span>`).join("")}</td>
                       <td>
@@ -1151,7 +1188,7 @@
                       </td>
                     </tr>
                   `;
-                }).join("") : `<tr><td colspan="5" style="text-align:center;">لا يوجد طلاب مسجلون بعد</td></tr>`}
+                }).join("") : `<tr><td colspan="6" style="text-align:center;">لا يوجد طلاب مسجلون بعد</td></tr>`}
               </tbody>
             </table>
           </div>
@@ -1164,7 +1201,8 @@
         showToast("أضف ولي أمر أولًا قبل إضافة طالب");
         return;
       }
-      openModal("إضافة طالب جديد", `
+      const firstSchedule = (db.settings.schedules && db.settings.schedules[0]) || "";
+      openModal("إضافة طالب جديد وتحديد موعده", `
         <form onsubmit="addStudent(event)">
           <div class="form-group">
             <label>اسم الطالب</label>
@@ -1183,6 +1221,10 @@
             </div>
           </div>
           <div class="form-group">
+            <label>موعد الطالب</label>
+            ${renderScheduleOptions(firstSchedule)}
+          </div>
+          <div class="form-group">
             <label>المواد الدراسية المسجلة للطالب</label>
             ${renderSubjectsCheckboxes(["القرآن الكريم", "اللغة العربية", "الرياضيات"])}
           </div>
@@ -1196,8 +1238,13 @@
       const name = document.getElementById("stName").value.trim();
       const grade = document.getElementById("stGrade").value.trim();
       const parentId = document.getElementById("stParent").value;
+      const schedule = getSelectedScheduleValue();
       const subjects = Array.from(document.querySelectorAll('input[name="studentSubject"]:checked')).map(i => i.value);
 
+      if (!schedule) {
+        showToast("اختر أو اكتب موعد الطالب");
+        return;
+      }
       if (!subjects.length) {
         showToast("اختر مادة واحدة على الأقل للطالب");
         return;
@@ -1207,6 +1254,7 @@
         id: "s_" + Date.now(),
         name,
         grade,
+        schedule,
         parentId,
         subjects,
         records: {}
@@ -1222,7 +1270,7 @@
     function openEditStudentModal(studentId) {
       const st = db.students.find(x => x.id === studentId);
       if (!st) return;
-      openModal("تعديل بيانات الطالب ومواده", `
+      openModal("تعديل بيانات الطالب وموعده ومواده", `
         <form onsubmit="updateStudent(event, '${st.id}')">
           <div class="form-group">
             <label>اسم الطالب</label>
@@ -1241,6 +1289,10 @@
             </div>
           </div>
           <div class="form-group">
+            <label>موعد الطالب</label>
+            ${renderScheduleOptions(st.schedule || "")}
+          </div>
+          <div class="form-group">
             <label>المواد الدراسية</label>
             ${renderSubjectsCheckboxes(st.subjects || [])}
           </div>
@@ -1256,8 +1308,13 @@
       const name = document.getElementById("estName").value.trim();
       const grade = document.getElementById("estGrade").value.trim();
       const parentId = document.getElementById("estParent").value;
+      const schedule = getSelectedScheduleValue();
       const subjects = Array.from(document.querySelectorAll('input[name="studentSubject"]:checked')).map(i => i.value);
 
+      if (!schedule) {
+        showToast("اختر أو اكتب موعد الطالب");
+        return;
+      }
       if (!subjects.length) {
         showToast("اختر مادة واحدة على الأقل");
         return;
@@ -1266,6 +1323,7 @@
       st.name = name;
       st.grade = grade;
       st.parentId = parentId;
+      st.schedule = schedule;
       st.subjects = subjects;
       subjects.forEach(sub => ensureStudentSubjectRecord(st, sub));
 
@@ -1315,6 +1373,10 @@
                 ${subs.map(sub => `<option value="${sub}" ${sub === activeSubject ? "selected" : ""}>${sub}</option>`).join("")}
               </select>
             </div>
+          </div>
+
+          <div class="schedule-box" style="margin-bottom:14px;">
+            موعد الطالب الحالي: ${activeStudent.schedule || "غير محدد"}
           </div>
 
           <form onsubmit="saveFollowupRecord(event)">
@@ -1411,24 +1473,12 @@
       await saveToFirebase();
     }
 
-    // إعدادات السنتر والمواد وقفل بيانات الإدارة
+    // إعدادات السنتر، يوزر/باسورد الإدارة، المواد، والمواعيد
     function renderSettingsSection() {
       const box = document.getElementById("adminTabContent");
-      const isLocked = Boolean(db.settings.adminLocked);
-
       box.innerHTML = `
         <div class="card">
-          <div class="card-title">إعدادات السنتر وتأمين حساب الإدارة</div>
-
-          ${isLocked ? `
-            <div class="lock-banner">
-              🔒 تم قفل تغيير اسم المستخدم وكلمة المرور للإدارة بعد التخصيص الأول؛ فلا يمكن لأي شخص تعديل بيانات دخول الإدارة من داخل الصفحة.
-            </div>
-          ` : `
-            <div class="lock-banner">
-              ⚠️ ملاحظة أمان: بمجرد تعديل اسم المستخدم أو كلمة المرور وحفظها لأول مرة، سيتم قفل هذا القسم تلقائيًا حتى لا يتمكن أي شخص من تغيير بيانات الإدارة.
-            </div>
-          `}
+          <div class="card-title">إعدادات السنتر وحساب الإدارة والمواعيد</div>
 
           <form onsubmit="saveSettings(event)">
             <div class="form-group">
@@ -1438,13 +1488,19 @@
 
             <div class="grid-2">
               <div class="form-group">
-                <label>اسم مستخدم الإدارة ${isLocked ? "(مقفل 🔒)" : ""}</label>
-                <input type="text" id="setAdminUser" value="${db.settings.adminUser}" required ${isLocked ? "disabled" : ""} />
+                <label>اسم مستخدم الإدارة</label>
+                <input type="text" id="setAdminUser" value="${db.settings.adminUser}" required />
               </div>
               <div class="form-group">
-                <label>كلمة مرور الإدارة ${isLocked ? "(مقفل 🔒)" : ""}</label>
-                <input type="text" id="setAdminPass" value="${db.settings.adminPass}" required ${isLocked ? "disabled" : ""} />
+                <label>كلمة مرور الإدارة (يمكن تغييرها في أي وقت)</label>
+                <input type="text" id="setAdminPass" value="${db.settings.adminPass}" required />
               </div>
+            </div>
+
+            <div class="form-group">
+              <label>المواعيد المتاحة للطلاب (افصل بين كل موعد بعلامة | أو سطر جديد)</label>
+              <textarea id="setSchedules" rows="3" required>${(db.settings.schedules || DEFAULT_SCHEDULES).join("\n")}</textarea>
+              <div class="helper-text">مثال: السبت والثلاثاء — 4:00 م ثم سطر جديد الأحد والأربعاء — 6:00 م</div>
             </div>
 
             <div class="form-group">
@@ -1452,7 +1508,7 @@
               <input type="text" id="setSubjects" value="${(db.settings.customSubjects || DEFAULT_SUBJECTS).join("، ")}" required />
             </div>
 
-            <button type="submit" class="btn btn-primary">حفظ الإعدادات</button>
+            <button type="submit" class="btn btn-primary">حفظ جميع الإعدادات</button>
           </form>
         </div>
       `;
@@ -1461,42 +1517,47 @@
     async function saveSettings(e) {
       e.preventDefault();
       const newCenterName = document.getElementById("setCenterName").value.trim();
+      const newAdminUser = document.getElementById("setAdminUser").value.trim();
+      const newAdminPass = document.getElementById("setAdminPass").value;
+
       const subjectsRaw = document.getElementById("setSubjects").value;
       const parsedSubjects = subjectsRaw
         .split(/[,،]/)
         .map(s => s.trim())
         .filter(Boolean);
 
+      const schedulesRaw = document.getElementById("setSchedules").value;
+      const parsedSchedules = schedulesRaw
+        .split(/[\n|]/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      if (!newAdminUser || !newAdminPass) {
+        showToast("أدخل اسم مستخدم وكلمة مرور صحيحة للإدارة");
+        return;
+      }
       if (!parsedSubjects.length) {
         showToast("أدخل مادة دراسية واحدة على الأقل");
         return;
       }
+      if (!parsedSchedules.length) {
+        showToast("أدخل موعدًا واحدًا على الأقل");
+        return;
+      }
 
       db.settings.centerName = newCenterName || "سنتر التميز التعليمي";
+      db.settings.adminUser = newAdminUser;
+      db.settings.adminPass = newAdminPass;
       db.settings.customSubjects = parsedSubjects;
-
-      // إذا لم يكن مقفلًا بعد، نتحقق هل قام المستخدم بتغيير اليوزر أو الباسورد الافتراضي
-      if (!db.settings.adminLocked) {
-        const userInput = document.getElementById("setAdminUser");
-        const passInput = document.getElementById("setAdminPass");
-        const newUser = userInput ? userInput.value.trim() : db.settings.adminUser;
-        const newPass = passInput ? passInput.value : db.settings.adminPass;
-
-        if (newUser !== "admin" || newPass !== "1234") {
-          db.settings.adminUser = newUser;
-          db.settings.adminPass = newPass;
-          db.settings.adminLocked = true;
-          showToast("تم حفظ بيانات الإدارة وقفلها ضد أي تعديل خارجي");
-        }
-      }
+      db.settings.schedules = parsedSchedules;
 
       renderTopbar();
       renderSettingsSection();
-      await saveToFirebase(false);
+      await saveToFirebase();
     }
 
     // =========================================================================
-    // بوابة ولي الأمر (مع دعم تعدد الأبناء)
+    // بوابة ولي الأمر (مع دعم تعدد الأبناء وعرض الموعد المحجوز)
     // =========================================================================
     function renderParentPortal() {
       const root = document.getElementById("appRoot");
@@ -1543,6 +1604,9 @@
             <b>الاسم:</b> ${activeChild.name} &nbsp;|&nbsp;
             <b>الصف الدراسي:</b> ${activeChild.grade} &nbsp;|&nbsp;
             <b>عدد المواد:</b> ${subjects.length}
+            <div class="schedule-box">
+              📅 الموعد المحجوز للطالب: ${activeChild.schedule || "لم يتم تحديد موعد بعد"}
+            </div>
           </div>
         </div>
 
